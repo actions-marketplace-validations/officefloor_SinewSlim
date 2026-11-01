@@ -21,7 +21,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <ul><li><b>0.1.1</b>: no change to the plugin; the release lists the GitHub Action on the
+        <ul><li><b>0.2.0</b>: every method is read one way, as extracted methods: the
+        <code>framework:</code> setting is removed, and a configuration that still has it is read
+        without it, with a notification saying so. Slimming results are otherwise unchanged
+        (checked method for method against the reference implementation). SinewSlim's libraries
+        are now on Maven Central, as <code>net.officefloor.sinewslim</code>.</li>
+        <li><b>0.1.1</b>: no change to the plugin; the release lists the GitHub Action on the
         GitHub Marketplace.</li>
         <li><b>0.1.0</b>: the inspection, the gutter mark, the proposal overlay, and extraction
         with only the name asked for.</li></ul>

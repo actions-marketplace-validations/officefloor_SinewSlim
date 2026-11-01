@@ -21,7 +21,7 @@ tests and publishes everything; this note covers the tag scheme and the one-time
 ## Cutting a release
 
 Before the first release of a change to the search or the facts, run the full parity check
-(`ci/parity-full.sh`, an hour or two: DESIGN.md, Testing) and keep its `build/parity/parity.txt`
+(`ci/parity-full.sh`, about four hours: DESIGN.md, Testing) and keep its `build/parity/parity.txt`
 with the release notes.
 
 ```bash
