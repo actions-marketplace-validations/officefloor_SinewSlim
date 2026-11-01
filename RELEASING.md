@@ -20,6 +20,10 @@ tests and publishes everything; this note covers the tag scheme and the one-time
 
 ## Cutting a release
 
+Before the first release of a change to the search or the facts, run the full parity check
+(`ci/parity-full.sh`, an hour or two: DESIGN.md, Testing) and keep its `build/parity/parity.txt`
+with the release notes.
+
 ```bash
 # 1. Add a <li><b>0.2.0</b>: …</li> entry to the change-notes in
 #    intellij/src/main/resources/META-INF/plugin.xml (the Marketplace shows it; the release

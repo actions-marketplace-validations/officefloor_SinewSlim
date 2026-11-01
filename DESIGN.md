@@ -522,10 +522,12 @@ as ImpactGate's command does.
 ## Testing
 
 - **Parity with the study.** The Java core is accepted when it reproduces `split.py` exactly
-  (status, slim cost, pieces, cuts) on the study's facts for every method in the MLCQ and
-  OfficeHQ sets, under the study profile. The study's facts files are the golden data; the
-  comparison runs once in the study repository and its expected outputs are committed here as
-  test resources, so this repository needs no Python.
+  (status, slim cost, pieces, cuts) on the study's facts, under each of its named parameter
+  sets. A committed subset (1,200 methods) is replayed on every build, so this repository needs
+  no Python for it. The full check, every long method of the study's seed-3 open-source sample
+  (about 187,000), is `ci/parity-full.sh`: the study exports `split.py`'s answers, the parity test
+  replays them, and the record goes to `build/parity/parity.txt`. It is run before a change to
+  the search or the facts is merged, and before a release to Maven Central.
 - **Unit tests** in `core` from hand-written fact sets: each seam role, each jump rule, the
   soft-limit premium, the loop back edge, recursion into a long loop, every not-slimmable
   reason.
