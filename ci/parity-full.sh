@@ -15,8 +15,10 @@
 # 2. SinewSlim's parity test replays every one of them and fails on any difference in status,
 #    slim cost, pieces or cuts, under each named parameter set.
 #
-# The export takes an hour or two (seed 3 holds large repositories); the replay minutes. Both
-# commits, the method count and the result are written to build/parity/parity.txt.
+# The export takes about three hours (seed 3 holds large repositories), printing its count each
+# minute; the replay about twenty minutes. A finished export is reused when the script is run
+# again at the same study commit, so a failed replay is rerun in minutes. Both commits, the
+# method count and the result are written to build/parity/parity.txt.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -31,8 +33,30 @@ OUT="build/parity"
 GOLDEN="$OUT/split-golden.seed3.jsonl.gz"
 mkdir -p "$OUT"
 
-echo "=== 1. split.py's answers on seed 3 (the study, $(git -C "$STUDY" rev-parse --short HEAD)) -> $GOLDEN ==="
-(cd "$STUDY" && "$PY" scripts/export_split_golden.py --sets seed3 --out "$OLDPWD/$GOLDEN")
+STUDY_COMMIT="$(git -C "$STUDY" rev-parse HEAD)"
+DONE="$GOLDEN.study"   # the study commit a finished export was made at
+
+echo "=== 1. split.py's answers on seed 3 (the study, ${STUDY_COMMIT:0:7}) -> $GOLDEN ==="
+if [ -f "$DONE" ] && [ "$(cat "$DONE")" = "$STUDY_COMMIT" ] && gzip -t "$GOLDEN" 2>/dev/null; then
+  echo "already exported at this study commit: reused (delete $DONE to export again)"
+else
+  rm -f "$DONE"
+  (cd "$STUDY" && exec "$PY" scripts/export_split_golden.py --sets seed3 --out "$OLDPWD/$GOLDEN") &
+  EXPORT=$!
+  trap 'kill "$EXPORT" 2>/dev/null' EXIT
+  START=$SECONDS
+  # A line a minute: the export is otherwise silent for hours. The count lags a little, as the
+  # gzip stream is written in blocks; seed 3 holds about 187,000 long methods.
+  while kill -0 "$EXPORT" 2>/dev/null; do
+    for _ in $(seq 60); do kill -0 "$EXPORT" 2>/dev/null || break; sleep 1; done
+    kill -0 "$EXPORT" 2>/dev/null || break
+    echo "  $(( (SECONDS - START) / 60 )) min: $(zcat "$GOLDEN" 2>/dev/null | wc -l) methods written"
+  done
+  wait "$EXPORT"
+  trap - EXIT
+  echo "$STUDY_COMMIT" > "$DONE"
+  echo "  done in $(( (SECONDS - START) / 60 )) min: $(zcat "$GOLDEN" | wc -l) methods"
+fi
 
 echo
 echo "=== 2. SinewSlim's parity test on every one of them ==="
@@ -42,7 +66,7 @@ echo "=== 2. SinewSlim's parity test on every one of them ==="
 RESULT="$(grep -ho "$PWD/$GOLDEN: [^<&]*" core/build/test-results/test/TEST-*StudyParityTest.xml | head -1)"
 {
   echo "sinewslim:  $(git rev-parse HEAD)$(git diff --quiet || echo ' (with uncommitted changes)')"
-  echo "study:      $(git -C "$STUDY" rev-parse HEAD)"
+  echo "study:      $STUDY_COMMIT"
   echo "golden:     $GOLDEN ($(sha256sum "$GOLDEN" | cut -c1-16))"
   echo "result:     ${RESULT#"$PWD/"}"
   echo "when:       $(date -u +%Y-%m-%dT%H:%M:%SZ)"
