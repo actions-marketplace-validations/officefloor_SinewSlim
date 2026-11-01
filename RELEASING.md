@@ -31,7 +31,7 @@ git push origin v0.2.0
 
 That one push first checks, publishing nothing until all pass:
 
-- the four publishing secrets are set (below), before anything else;
+- the eight publishing secrets are set (below), before anything else;
 - the tag is `vMAJOR.MINOR.PATCH`, and `plugin.xml` has change notes for that version;
 - the build and tests pass;
 - the Plugin Verifier passes against every IDE of the plugin's range.
@@ -44,9 +44,17 @@ Then, in parallel, it:
   `latest`;
 - signs the plugin and uploads it to the JetBrains Marketplace (JetBrains then reviews it, so
   the version appears there a day or two later);
+- signs the five libraries and uploads them to Maven Central as one deployment
+  (`net.officefloor.sinewslim:sinewslim-*:0.2.0`, each with sources, javadoc and its POM);
 
-and when all three succeed, moves the `v0` tag to this commit. A failure in one of those three
+and when all four succeed, moves the `v0` tag to this commit. A failure in one of those four
 (an outage, say) does not undo the others: fix it and re-run the failed jobs.
+
+**Then publish the Central deployment by hand.** The upload waits in the
+[Central Portal](https://central.sonatype.com/publishing/deployments), validated but not
+public. Check it there (five components, signed) and press *Publish*. A Central release can never
+be deleted or replaced, which is why this one step is not automatic. Dropping the deployment
+instead leaves nothing behind, and the version can be released again.
 
 ## One-time setup
 
@@ -78,6 +86,19 @@ published unsigned.
 
 Once the listing is live, add its link and the IDE's **Settings > Plugins > Marketplace**
 install route to the README.
+
+### Maven Central (the libraries)
+
+The four secrets `SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `GPG_PRIVATE_KEY` and
+`GPG_PASSPHRASE` are the OfficeFloor organisation's, set by `setup-central-publishing.sh` in
+[OfficeFloorMaintenance](https://github.com/officefloor/OfficeFloorMaintenance) for the
+repositories in its `central-publishing-repositories.txt`, SinewSlim among them: the same Central
+account and signing key as OfficeFloor's own releases, under the `net.officefloor` namespace. The
+release workflow hands them to Gradle as `ORG_GRADLE_PROJECT_mavenCentralUsername`, `...Password`,
+`signingInMemoryKey` and `signingInMemoryKeyPassword`. Do not set them as repository secrets here.
+
+A dry run needs none of them: `./gradlew -Pversion=0.2.0 publishAllPublicationsToStagingRepository`
+writes the unsigned bundle to `build/staging-deploy`.
 
 ### GHCR (the Docker image)
 

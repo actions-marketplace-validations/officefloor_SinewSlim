@@ -5,7 +5,9 @@ name: Release
 #   git tag v0.2.0 && git push origin v0.2.0
 # That attaches the jar to a GitHub Release, refreshes the rolling major release (v0) the
 # Action downloads from, pushes the Docker image to GHCR, publishes the IntelliJ plugin to the
-# JetBrains Marketplace, and moves the major tag so the Action can be pinned as
+# JetBrains Marketplace, uploads the libraries to Maven Central (net.officefloor.sinewslim:
+# sinewslim-*, signed; the deployment is then published by hand in the Central Portal, as a
+# Central release cannot be taken back), and moves the major tag so the Action can be pinned as
 # officefloor/SinewSlim@v0.
 #
 # Everything that could stop a release is checked before anything is published: the secrets,
@@ -21,17 +23,23 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      # all four from the OfficeFloor organisation (setup-jetbrains-publishing.sh in
-      # officefloor/OfficeFloorMaintenance)
+      # all eight from the OfficeFloor organisation, set by officefloor/OfficeFloorMaintenance:
+      # the plugin's four by setup-jetbrains-publishing.sh, Central's four by
+      # setup-central-publishing.sh (the same account and key as OfficeFloor's own releases)
       - name: Check the publishing secrets
         env:
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
           CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           missing=""
-          for name in PUBLISH_TOKEN CERTIFICATE_CHAIN PRIVATE_KEY PRIVATE_KEY_PASSWORD; do
+          for name in PUBLISH_TOKEN CERTIFICATE_CHAIN PRIVATE_KEY PRIVATE_KEY_PASSWORD \
+              SONATYPE_USERNAME SONATYPE_PASSWORD GPG_PRIVATE_KEY GPG_PASSPHRASE; do
             [ -n "${!name}" ] || missing="$missing $name"
           done
           if [ -n "$missing" ]; then
@@ -152,9 +160,31 @@ jobs:
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
         run: ./gradlew --console=plain -Pversion=${{ needs.build.outputs.version }} :intellij:publishPlugin
 
+  # Sign and upload the libraries to Maven Central (DESIGN.md, the libraries). The deployment
+  # waits in the Central Portal to be published by hand: a Central release is permanent.
+  maven-central:
+    needs: [build, verify-plugin]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Upload the libraries to Maven Central
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSPHRASE }}
+        run: ./gradlew --console=plain --no-configuration-cache -Pversion=${{ needs.build.outputs.version }} publishToMavenCentral
+
   # Move the major tag so @v0 runs the newest v0.x action.yml, which downloads the v0 jar.
   major-tag:
-    needs: [github-release, docker, marketplace]
+    needs: [github-release, docker, marketplace, maven-central]
     runs-on: ubuntu-latest
     permissions:
       contents: write
