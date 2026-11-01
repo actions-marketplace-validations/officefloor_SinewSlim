@@ -13,11 +13,10 @@ import net.officefloor.sinewslim.core.SlimResult;
  * @param nameLine   the line of its name
  * @param endLine    its last line
  * @param length     its code lines
- * @param framework  read under the framework reading
  * @param assessment the verdict and the proposal
  */
 public record MethodReport(String path, String type, String signature, int nameLine, int endLine, int length,
-		boolean framework, Assessment assessment) {
+		Assessment assessment) {
 
 	public Status status() {
 		return assessment.status();

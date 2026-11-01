@@ -28,7 +28,7 @@ public record ScanReport(String version, String root, Config config, double seco
 	}
 
 	/** The JSON schema the report is written in; bumped with any change to its shape. */
-	public static final int SCHEMA = 1;
+	public static final int SCHEMA = 2;
 
 	public ScanReport {
 		unparsed = List.copyOf(unparsed);

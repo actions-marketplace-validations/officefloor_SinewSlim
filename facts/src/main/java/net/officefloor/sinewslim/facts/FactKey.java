@@ -16,7 +16,7 @@ public final class FactKey<T> {
 		this.name = name;
 	}
 
-	/** A new key; the name is for reading only, {@code officefloorslim.annotations} for example. */
+	/** A new key; the name is for reading only, {@code myproject.annotations} for example. */
 	public static <T> FactKey<T> of(String name) {
 		return new FactKey<>(name);
 	}

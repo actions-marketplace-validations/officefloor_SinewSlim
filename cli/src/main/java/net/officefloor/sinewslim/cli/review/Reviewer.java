@@ -116,9 +116,8 @@ public final class Reviewer {
 		case STILL_OVER -> !config.ratchet();
 		case SLIMMED -> false;
 		};
-		Assessment a = config.assessor(m.annotations()).assess(m.facts());
-		MethodReport r = new MethodReport(path, m.type(), m.signature(), m.nameLine(), m.endLine(), after,
-				config.framework(m.annotations()), a);
+		Assessment a = config.assessor().assess(m.facts());
+		MethodReport r = new MethodReport(path, m.type(), m.signature(), m.nameLine(), m.endLine(), after, a);
 		return new Finding(kind, r, before, gates);
 	}
 

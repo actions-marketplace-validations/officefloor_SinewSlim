@@ -98,14 +98,20 @@ source into the same facts; everything above that line is shared. That is the on
 keeps the three surfaces agreeing.
 
 The five libraries publish to Maven Central as `net.officefloor.sinewslim:<project>`, and each
-Gradle project carries its artifact name (`:sinewslim-core` in `core/`), so a composite build
-(OfficeFloorSlim's) substitutes them without a substitution block. Each has its own package
+Gradle project carries its artifact name (`:sinewslim-core` in `core/`), so a project building on
+them with a composite build substitutes them without a substitution block. Each has its own package
 (`net.officefloor.sinewslim.facts`, `.core`, `.javaparser`, `.config`, `.scan`): no package is
 split across two jars. `facts` and `scan` exist for consumers that price the same methods
-another way: OfficeFloorSlim reads the facts and the seams but not SinewSlim's cost, and scans
-other files beside the Java.
+another way: such a consumer reads the facts and the seams but not SinewSlim's cost, adds its own
+facts through the extractors, and scans other files beside the Java.
 
 ## Configuration
+
+SinewSlim reads every method one way: as methods extracted from it. The framework reading it had
+until 0.2 (a method marked by `framework.annotations` priced as functions a framework injects) is
+removed; pricing another architecture is not a health measure's job. A `framework:` key left in
+a `.sinew-slim.yml`, or given with `--set`, is ignored with a warning, so no existing
+configuration breaks.
 
 One file at the repository root, `.sinew-slim.yml`, found by every surface (the plugin reads
 it from the project root, and falls back to the IDE settings page when there is none). CLI
@@ -140,11 +146,6 @@ prefer_structural_within: 1   # prefer the structural proposal when it costs at 
 # binding to the class
 lock_on_any_field: false # default: a field write or an own-method call locks a piece
 parameterise_field_reads: true
-
-# framework reading (function injection): which classes are read this way
-framework:
-  annotations: []        # e.g. [net.officefloor.plugin.section.clazz.Next]
-  free_params: true
 
 # what is scanned
 include: ["**/*.java"]
@@ -225,7 +226,7 @@ For a run of statements with line set L, each local or parameter takes one role:
 | input | referenced in L and referenced before L | a parameter |
 | output | written in L and referenced after L, or referenced earlier in an enclosing loop | the return value |
 | moved | declared before L with no value or a literal one, every other reference in L | nothing: the declaration moves into the new method |
-| passed | a method parameter used unchanged | an input, labelled; free under the framework reading |
+| passed | a method parameter used unchanged | an input, labelled |
 | internal / untouched | — | nothing |
 
 A run is **feasible** when it has at most `max_outputs` outputs, at most `max_inputs`
@@ -462,11 +463,6 @@ as ImpactGate's command does.
   to do, and closes once the method is under the cap.
 - **Records**: a piece with two or more results has *Extract with record…*, which asks for
   two names, the method's and the record's (suggested as `computeA` and `AAndB`).
-- **Framework reading**: a method marked by `framework.annotations` shows its pieces as
-  functions, *function 1 · lines 48-71 · 24 lines · declares: request, config · produces:
-  session · static*, with *Skip* and no Extract button: the edit is a different refactoring
-  (functions the framework calls, not a method the remainder calls), applied by hand until a
-  framework-aware one exists.
 
 ### How it works
 

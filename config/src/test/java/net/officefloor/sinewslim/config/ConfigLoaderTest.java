@@ -52,14 +52,12 @@ class ConfigLoaderTest {
 				max_inputs: 4
 				soft_inputs: 3
 				enforcement: block
-				framework:
-				  annotations: [Next]
 				""", Map.of("max_inputs", 5));
 		assertEquals(4, c.params().minPiece());
 		assertEquals(5, c.params().maxInputs());
 		assertEquals(3, c.params().softInputs());
 		assertEquals(Enforcement.BLOCK, c.enforcement());
-		assertEquals(List.of("Next"), c.frameworkAnnotations());
+		assertEquals(List.of(), c.warnings());
 	}
 
 	@Test
@@ -80,20 +78,21 @@ class ConfigLoaderTest {
 	}
 
 	@Test
-	void dottedOverridesReachNestedKeys() throws IOException {
-		Config c = load(null, Map.of("framework.annotations", "Next, net.officefloor.plugin.section.clazz.Parameter"));
-		assertEquals(List.of("Next", "net.officefloor.plugin.section.clazz.Parameter"), c.frameworkAnnotations());
-		assertTrue(c.framework(List.of("Parameter")));
-		assertTrue(c.framework(List.of("Next")));
-		assertFalse(c.framework(List.of("Override")));
+	void theRemovedFrameworkKeyIsIgnoredWithAWarning() throws IOException {
+		Config fromFile = load("min_piece: 4\nframework:\n  annotations: [Next]\n  free_params: false", Map.of());
+		assertEquals(4, fromFile.params().minPiece());
+		assertEquals(List.of(ConfigLoader.FRAMEWORK_REMOVED), fromFile.warnings());
+		assertEquals(Config.class, fromFile.getClass());
+		// as a dotted override too, and noted once however often it is given
+		Config both = load("framework:\n  annotations: [Next]", Map.of("framework.annotations", "Section"));
+		assertEquals(List.of(ConfigLoader.FRAMEWORK_REMOVED), both.warnings());
+		assertEquals(Params.DEFAULTS, both.params());
 	}
 
 	@Test
 	void mistakesNameTheKey() {
 		assertTrue(assertThrows(ConfigException.class, () -> load("min_pice: 3", Map.of())).getMessage()
 				.startsWith("min_pice: unknown key"));
-		assertTrue(assertThrows(ConfigException.class, () -> load("framework:\n  annotation: [X]", Map.of()))
-				.getMessage().startsWith("framework.annotation: unknown key"));
 		assertTrue(assertThrows(ConfigException.class, () -> load("trigger: lots", Map.of())).getMessage()
 				.startsWith("trigger: expected a whole number"));
 		assertTrue(assertThrows(ConfigException.class, () -> load("target: 30", Map.of())).getMessage()
@@ -108,8 +107,9 @@ class ConfigLoaderTest {
 
 	@Test
 	void theDumpReadsBackAsTheSameConfiguration() throws IOException {
-		Config c = load("profile: study\nsoft_inputs: 2\nframework:\n  annotations: [Next]", Map.of());
-		Config again = load(ConfigLoader.dump(c), Map.of());
-		assertEquals(c, again);
+		Config c = load("profile: study\nsoft_inputs: 2", Map.of());
+		String dump = ConfigLoader.dump(c);
+		assertFalse(dump.contains("framework"), dump);
+		assertEquals(c, load(dump, Map.of()));
 	}
 }

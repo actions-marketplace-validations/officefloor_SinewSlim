@@ -32,10 +32,9 @@ public final class HealthScan {
 		List<Glob> exclude = config.exclude().stream().map(Glob::new).toList();
 		List<FileResult<List<MethodReport>>> results = Scanner.scan(root, include, exclude, threads,
 				Scanner.javaMethods(List.of(), (path, m) -> {
-					boolean framework = config.framework(m.annotations());
-					Assessment a = config.assessor(m.annotations()).assess(m.facts());
+					Assessment a = config.assessor().assess(m.facts());
 					return new MethodReport(path, m.type(), m.signature(), m.nameLine(), m.endLine(), m.facts().length(),
-							framework, a);
+							a);
 				}));
 
 		List<ScanReport.Unparsed> unparsed = new ArrayList<>();

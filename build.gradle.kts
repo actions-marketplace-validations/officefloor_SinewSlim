@@ -48,7 +48,7 @@ subprojects {
     }
 }
 
-// The libraries other projects build on (OfficeFloorSlim among them) go to Maven Central under
+// The libraries other projects build on go to Maven Central under
 // net.officefloor.sinewslim. The CLI and the plugin are not published here: they ship as the
 // release jar, the Docker image and the Marketplace plugin.
 //

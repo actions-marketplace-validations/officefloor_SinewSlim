@@ -13,7 +13,7 @@ import net.officefloor.sinewslim.facts.Seam;
 final class CsvReport implements ReportWriter {
 
 	static final List<String> HEADER = List.of("path", "type", "signature", "line", "end_line", "length", "headroom",
-			"status", "obstacle", "reading", "slim_cost", "total_cost", "interface", "pieces", "remainder", "locked",
+			"status", "obstacle", "slim_cost", "total_cost", "interface", "pieces", "remainder", "locked",
 			"bound", "free", "remainder_locked", "cuts");
 
 	@Override
@@ -30,7 +30,7 @@ final class CsvReport implements ReportWriter {
 			row(out, List.of(m.path(), m.type(), m.signature(), str(m.nameLine()), str(m.endLine()), str(m.length()),
 					str(m.headroom()), m.status().name().toLowerCase(Locale.ROOT),
 					m.assessment().obstacle() == null ? "" : m.assessment().obstacle().name().toLowerCase(Locale.ROOT),
-					m.framework() ? "framework" : "method", shown ? str(p.width()) : "", shown ? str(p.cost()) : "",
+					shown ? str(p.width()) : "", shown ? str(p.cost()) : "",
 					shown ? str(p.interfaceSize()) : "", shown ? str(p.pieces()) : "", shown ? str(p.remainder()) : "",
 					shown ? str(p.count(Binding.LOCKED)) : "", shown ? str(p.count(Binding.BOUND)) : "",
 					shown ? str(p.count(Binding.FREE)) : "", shown ? String.valueOf(p.remainderLocked()) : "",

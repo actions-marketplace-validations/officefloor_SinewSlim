@@ -56,27 +56,6 @@ public final class Pieces {
 			parts.add("saves " + saves);
 			return String.join(separator, parts);
 		}
-
-		/**
-		 * The piece as a function a framework calls ({@code SPLIT-TOOL.md}, Under function
-		 * injection): what it declares, the method's own parameters and the values earlier
-		 * functions produced, and what it produces, each a declared value rather than a return:
-		 * {@code 24 lines · declares: request, config · produces: session · static · saves 23}.
-		 */
-		public String frameworkSummary(String separator) {
-			List<String> declares = new ArrayList<>(passed);
-			declares.addAll(inputs);
-			List<String> parts = new ArrayList<>();
-			parts.add(lines + " lines");
-			parts.add("declares: " + list(declares));
-			parts.add("produces: " + list(outputs()));
-			if (!moved().isEmpty()) {
-				parts.add("moves in: " + list(moved()));
-			}
-			parts.add(binding);
-			parts.add("saves " + saves);
-			return String.join(separator, parts);
-		}
 	}
 
 	public static List<Piece> of(SlimResult r, boolean parameteriseFieldReads) {

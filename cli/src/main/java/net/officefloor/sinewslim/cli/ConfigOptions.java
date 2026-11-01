@@ -63,7 +63,10 @@ final class ConfigOptions {
 		}
 	}
 
+	/** The configuration, each warning from reading it printed to standard error. */
 	Config load() {
-		return ConfigLoader.load(root(), config, overrides());
+		Config c = ConfigLoader.load(root(), config, overrides());
+		c.warnings().forEach(w -> System.err.println("warning: " + w));
+		return c;
 	}
 }

@@ -23,13 +23,14 @@ import net.officefloor.sinewslim.facts.Seam;
  * @param trailingReturn   a run may end in a return; any other return leaves it
  * @param structuralOnly   pieces are whole if, loop, try and switch statements only
  * @param lockOnAnyField   a field read locks a piece too (otherwise a write, or an own call)
- * @param freeParams       a parameter of the method handed to a piece unchanged costs nothing:
- *                         the framework injects it (function injection)
+ * @param freeParams       a parameter of the method handed to a piece unchanged costs nothing;
+ *                         off by default, and kept for the study's {@code split.py} variant that
+ *                         sets it (the parity data replays it)
  * @param ignoreJumps      a jump leaving a run does not stop it moving: a diagnostic only, to
  *                         tell a method blocked by its jumps from one blocked by a long statement
  * @param countUnpacking   a piece returning a record leaves one line per value behind as well as
  *                         its call: {@code int a = totals.a();}. Off in the study (split.py counts
- *                         the call alone) and under the framework reading (the values are declared)
+ *                         the call alone)
  */
 public record Params(int trigger, int target, int minPiece, int minSaving, int maxInputs, int maxOutputs, int softInputs,
 		int inputPremium, int outputWeight, int multiOutputWeight, int pieceCost, boolean trailingReturn,
@@ -89,14 +90,6 @@ public record Params(int trigger, int target, int minPiece, int minSaving, int m
 	/** No limit on the parameters a piece may need. */
 	public Params unlimitedInputs() {
 		return toBuilder().maxInputs(-1).build();
-	}
-
-	/**
-	 * The pieces read as functions a framework calls in sequence: a pass-through parameter is
-	 * injected for nothing, and each further result is one more declared value, not a record.
-	 */
-	public Params framework() {
-		return toBuilder().freeParams(true).maxOutputs(-1).multiOutputWeight(1).countUnpacking(false).build();
 	}
 
 	public Builder toBuilder() {

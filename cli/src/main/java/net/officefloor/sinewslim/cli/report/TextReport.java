@@ -82,7 +82,7 @@ final class TextReport implements ReportWriter {
 		heading(out, title + " (" + methods.size() + ")");
 		for (MethodReport m : methods) {
 			out.append(m.location()).append(": ").append(m.qualified()).append("  ").append(Describe.verdict(m))
-					.append(m.framework() ? "  [framework reading]" : "").append(System.lineSeparator());
+					.append(System.lineSeparator());
 			if (proposals && m.proposal().feasible()) {
 				proposal(out, m, "  ", pfr);
 			}

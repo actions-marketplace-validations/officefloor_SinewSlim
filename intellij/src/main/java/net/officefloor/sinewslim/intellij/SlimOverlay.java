@@ -173,7 +173,7 @@ public final class SlimOverlay implements Disposable {
 
 		String head = "SinewSlim · " + length + " lines · " + Pieces.verdict(a, length)
 				+ (r.feasible() ? " · remainder " + Pieces.remainder(r, length) : "")
-				+ (ma.framework() ? " · framework reading" : "") + (excluded.isEmpty() ? "" : " · " + excluded.size() + " skipped");
+				+ (excluded.isEmpty() ? "" : " · " + excluded.size() + " skipped");
 		List<SlimInlayRenderer.Button> headButtons = new ArrayList<>();
 		if (!excluded.isEmpty()) {
 			headButtons.add(new SlimInlayRenderer.Button("Reset", () -> {
@@ -197,18 +197,12 @@ public final class SlimOverlay implements Disposable {
 					HighlighterTargetArea.LINES_IN_RANGE));
 			List<SlimInlayRenderer.Button> buttons = new ArrayList<>();
 			String label;
-			if (ma.framework()) {
-				// a function the framework calls in sequence: what it declares and produces, applied by hand
-				label = "function " + (i + 1) + " · lines " + p.lo() + "-" + p.hi() + " · " + p.frameworkSummary(" · ")
-						+ " · extract by hand as a function";
+			if (p.outputs().size() > 1) {
+				buttons.add(new SlimInlayRenderer.Button("Extract with record…", () -> extractWithRecord(p)));
 			} else {
-				if (p.outputs().size() > 1) {
-					buttons.add(new SlimInlayRenderer.Button("Extract with record…", () -> extractWithRecord(p)));
-				} else {
-					buttons.add(new SlimInlayRenderer.Button("Extract…", () -> extract(p)));
-				}
-				label = "piece " + (i + 1) + " · lines " + p.lo() + "-" + p.hi() + " · " + p.summary(" · ");
+				buttons.add(new SlimInlayRenderer.Button("Extract…", () -> extract(p)));
 			}
+			label = "piece " + (i + 1) + " · lines " + p.lo() + "-" + p.hi() + " · " + p.summary(" · ");
 			buttons.add(new SlimInlayRenderer.Button("Skip", () -> {
 				excluded.add(Run.of(p.seam()));
 				draw();

@@ -67,10 +67,6 @@ public final class ConfigLoader {
 		v.put("prefer_structural_within", 1);
 		v.put("lock_on_any_field", p.lockOnAnyField());
 		v.put("parameterise_field_reads", true);
-		Map<String, Object> framework = new LinkedHashMap<>();
-		framework.put("annotations", new ArrayList<>());
-		framework.put("free_params", true);
-		v.put("framework", framework);
 		v.put("include", new ArrayList<>(List.of("**/*.java")));
 		v.put("exclude", new ArrayList<>(List.of("**/generated/**", "**/target/**", "**/build/**")));
 		v.put("enforcement", "warn");
@@ -80,13 +76,13 @@ public final class ConfigLoader {
 
 	/** The defaults. */
 	public static Config defaults() {
-		return build(profile("default"));
+		return build(profile("default"), List.of());
 	}
 
 	/**
 	 * The configuration for a repository: its {@code .sinew-slim.yml} (or {@code file} when given)
 	 * over the defaults, then {@code overrides}, keys as in the file ({@code min_piece},
-	 * {@code framework.annotations}). A {@code profile} in either picks the starting values.
+	 * {@code max_inputs}). A {@code profile} in either picks the starting values.
 	 */
 	public static Config load(Path root, Path file, Map<String, Object> overrides) {
 		Path f = file != null ? file : root.resolve(FILE);
@@ -97,13 +93,31 @@ public final class ConfigLoader {
 		return resolve(fromFile, overrides);
 	}
 
+	/** What a {@code framework} key now says, wherever it is given: it is ignored. */
+	static final String FRAMEWORK_REMOVED = "framework: removed in SinewSlim 0.2 and ignored; every method is read one way,"
+			+ " as extracted methods";
+
 	/** The file's values and the overrides over the profile they name. */
 	public static Config resolve(Map<String, Object> fromFile, Map<String, Object> overrides) {
 		Object profile = overrides.containsKey("profile") ? overrides.get("profile") : fromFile.get("profile");
 		Map<String, Object> values = profile(profile == null ? "default" : String.valueOf(profile));
-		merge(values, fromFile, "");
-		merge(values, nest(overrides), "");
-		return build(values);
+		List<String> warnings = new ArrayList<>();
+		merge(values, withoutRemoved(fromFile, warnings), "");
+		merge(values, withoutRemoved(nest(overrides), warnings), "");
+		return build(values, warnings);
+	}
+
+	/** The values less the keys SinewSlim no longer has, each noted once in the warnings. */
+	static Map<String, Object> withoutRemoved(Map<String, Object> values, List<String> warnings) {
+		if (!values.containsKey("framework")) {
+			return values;
+		}
+		Map<String, Object> out = new LinkedHashMap<>(values);
+		out.remove("framework");
+		if (!warnings.contains(FRAMEWORK_REMOVED)) {
+			warnings.add(FRAMEWORK_REMOVED);
+		}
+		return out;
 	}
 
 	/** The YAML of a file, as a map. */
@@ -169,8 +183,7 @@ public final class ConfigLoader {
 	}
 
 	@SuppressWarnings("unchecked")
-	static Config build(Map<String, Object> v) {
-		Map<String, Object> fw = (Map<String, Object>) v.get("framework");
+	static Config build(Map<String, Object> v, List<String> warnings) {
 		Params params = Params.DEFAULTS.toBuilder() //
 				.trigger(integer(v, "trigger", 2)) //
 				.target(integer(v, "target", 1)) //
@@ -206,9 +219,8 @@ public final class ConfigLoader {
 		}
 		return new Config(string(v, "profile"), params, bool(v, "records"), bool(v, "structural"),
 				v.get("prefer_structural_within") == null ? -1 : integer(v, "prefer_structural_within", 0),
-				bool(v, "parameterise_field_reads"), strings(fw, "framework.annotations"),
-				bool(fw, "free_params", "framework.free_params"), strings(v, "include"), strings(v, "exclude"), e,
-				bool(v, "ratchet"));
+				bool(v, "parameterise_field_reads"), strings(v, "include"), strings(v, "exclude"), e, bool(v, "ratchet"),
+				warnings);
 	}
 
 	private static int integer(Map<String, Object> v, String key, int min) {
@@ -308,10 +320,6 @@ public final class ConfigLoader {
 		v.put("prefer_structural_within", c.preferStructuralWithin() < 0 ? null : c.preferStructuralWithin());
 		v.put("lock_on_any_field", p.lockOnAnyField());
 		v.put("parameterise_field_reads", c.parameteriseFieldReads());
-		Map<String, Object> fw = new LinkedHashMap<>();
-		fw.put("annotations", c.frameworkAnnotations());
-		fw.put("free_params", c.frameworkFreeParams());
-		v.put("framework", fw);
 		v.put("include", c.include());
 		v.put("exclude", c.exclude());
 		v.put("enforcement", c.enforcement().name().toLowerCase(Locale.ROOT));

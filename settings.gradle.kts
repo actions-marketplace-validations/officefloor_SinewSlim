@@ -8,8 +8,9 @@ pluginManagement {
 
 rootProject.name = "sinew-slim"
 
-// The libraries' projects carry their artifact names, so a composite build (OfficeFloorSlim's
-// includeBuild) substitutes net.officefloor.sinewslim:sinewslim-* without a substitution block.
+// The libraries' projects carry their artifact names, so a project building on them with a
+// composite build (includeBuild) substitutes net.officefloor.sinewslim:sinewslim-* without a
+// substitution block.
 // Their directories keep the short names.
 val libraries = mapOf(
     "sinewslim-facts" to "facts",

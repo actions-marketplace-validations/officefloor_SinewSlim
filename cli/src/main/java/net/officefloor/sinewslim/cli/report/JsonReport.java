@@ -90,7 +90,6 @@ public final class JsonReport implements ReportWriter {
 		if (m.status() == Status.UNDER_CAP) {
 			return o;
 		}
-		o.put("reading", m.framework() ? "framework" : "method");
 		if (m.assessment().obstacle() != null) {
 			o.put("obstacle", m.assessment().obstacle().name().toLowerCase(Locale.ROOT));
 			o.put("reason", m.assessment().reason());

@@ -1,9 +1,13 @@
 package net.officefloor.sinewslim.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -90,7 +94,7 @@ class ScanTest {
 	@Test
 	void everyMethodWithItsVerdict() throws IOException {
 		JsonNode doc = scan();
-		assertEquals(1, doc.get("schema").asInt());
+		assertEquals(2, doc.get("schema").asInt()); // 2: no "reading" since the framework reading went
 		JsonNode s = doc.get("summary");
 		assertEquals(5, s.get("files").asInt(), "target/ excluded, the hidden directory left out");
 		assertEquals(1, s.get("unparsed").asInt());
@@ -114,21 +118,22 @@ class ScanTest {
 	}
 
 	@Test
-	void theFrameworkReadingIsChosenByAnnotation() throws IOException {
+	void theRemovedFrameworkReadingIsIgnoredWithAWarning() throws IOException {
 		Files.writeString(repo.resolve("src/p/Stats.java"), interwoven().replace("class Stats", "@Section class Stats"));
-		Map<String, JsonNode> m = byType(scan("--set", "framework.annotations=Section"));
-		assertEquals("framework", m.get("Stats").get("reading").asText());
-		// several results are declared values under the framework reading, not a record
-		assertEquals("slimmable", m.get("Stats").get("status").asText());
-		assertEquals("method", m.get("Orders").get("reading").asText());
-
-		// the pieces read as functions: what each declares and produces
-		Path text = out.resolve("framework.txt");
-		assertEquals(SinewSlim.OK, SinewSlim.run("scan", "--repo", repo.toString(), "--set", "framework.annotations=Section",
-				"--out", text.toString()));
-		String report = Files.readString(text);
-		assertTrue(report.contains("[framework reading]"), report);
-		assertTrue(report.matches("(?s).*  function \\d+-\\d+  \\d+ lines  declares: .*  produces: .*"), report);
+		PrintStream err = System.err;
+		ByteArrayOutputStream captured = new ByteArrayOutputStream();
+		Map<String, JsonNode> m;
+		try {
+			System.setErr(new PrintStream(captured, true, StandardCharsets.UTF_8));
+			m = byType(scan("--set", "framework.annotations=Section"));
+		} finally {
+			System.setErr(err);
+		}
+		assertTrue(captured.toString(StandardCharsets.UTF_8).contains("warning: framework: removed"),
+				captured.toString(StandardCharsets.UTF_8));
+		// every method is read one way: no reading to report, and the annotation changes nothing
+		assertFalse(m.get("Stats").has("reading"));
+		assertEquals(byType(scan()).get("Stats").get("status"), m.get("Stats").get("status"));
 	}
 
 	@Test

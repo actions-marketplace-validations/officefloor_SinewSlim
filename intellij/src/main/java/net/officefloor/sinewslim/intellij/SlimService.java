@@ -34,7 +34,7 @@ public final class SlimService {
 	static final Logger LOG = Logger.getInstance(SlimService.class);
 
 	/** One method of a document and what SinewSlim says about it. */
-	public record MethodAnalysis(MethodUnit unit, Assessment assessment, boolean framework) {
+	public record MethodAnalysis(MethodUnit unit, Assessment assessment) {
 	}
 
 	/** A document's methods, as of one version of its text. */
@@ -56,6 +56,7 @@ public final class SlimService {
 	private Config config;
 	private long configStamp = Long.MIN_VALUE;
 	private String reportedProblem;
+	private String reportedWarnings;
 
 	public SlimService(Project project) {
 		this.project = project;
@@ -80,6 +81,12 @@ public final class SlimService {
 			try {
 				config = root == null ? ConfigLoader.defaults() : ConfigLoader.load(root, null, Map.of());
 				reportedProblem = null;
+				String warnings = String.join("; ", config.warnings());
+				if (!warnings.isEmpty() && !warnings.equals(reportedWarnings)) {
+					reportedWarnings = warnings;
+					NotificationGroupManager.getInstance().getNotificationGroup("SinewSlim")
+							.createNotification(".sinew-slim.yml: " + warnings, NotificationType.WARNING).notify(project);
+				}
 			} catch (ConfigLoader.ConfigException e) {
 				config = ConfigLoader.defaults();
 				if (!e.getMessage().equals(reportedProblem)) {
@@ -119,7 +126,7 @@ public final class SlimService {
 				return List.of(); // mid-edit: nothing to say until it parses again
 			}
 			return f.methods().stream()
-					.map(m -> new MethodAnalysis(m, c.assessor(m.annotations()).assess(m.facts()), c.framework(m.annotations())))
+					.map(m -> new MethodAnalysis(m, c.assessor().assess(m.facts())))
 					.toList();
 		} catch (StackOverflowError | RuntimeException e) {
 			LOG.warn("SinewSlim could not read " + path, e);
@@ -129,6 +136,6 @@ public final class SlimService {
 
 	/** One method again, the {@code excluded} runs left out: after the developer skips a piece. */
 	public Assessment reassess(MethodAnalysis m, Set<Run> excluded) {
-		return config().assessor(m.unit().annotations()).assess(m.unit().facts(), excluded);
+		return config().assessor().assess(m.unit().facts(), excluded);
 	}
 }

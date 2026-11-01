@@ -41,10 +41,6 @@ public final class Describe {
 	public static List<String> proposalLines(MethodReport m, boolean parameteriseFieldReads) {
 		List<String> out = new ArrayList<>();
 		for (Pieces.Piece p : pieces(m.proposal(), parameteriseFieldReads)) {
-			if (m.framework()) {
-				out.add(String.format("function %d-%d  %s", p.lo(), p.hi(), p.frameworkSummary("  ")));
-				continue;
-			}
 			out.add(String.format("lines %d-%d  %3d lines  in: %s%s  out: %s%s  %s  saves %d", p.lo(), p.hi(), p.lines(),
 					list(p.inputs()), p.passed().isEmpty() ? "" : "  passed: " + list(p.passed()), outputs(p.outputs()),
 					p.moved().isEmpty() ? "" : "  declares: " + list(p.moved()), p.binding(), p.saves()));
