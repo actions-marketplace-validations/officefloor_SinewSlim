@@ -309,6 +309,18 @@ mssql-jdbc (299 files) in about 3.5. A per-file cache keyed by the file's blob h
 (`.sinew-slim/cache/`) would let repeated scans and hooks skip unchanged files; not built,
 since nothing yet needs it.
 
+**Many runs of one sequence** (`Assessor.runs`, `RunSlimmer`, since 0.2.1). A caller that asks
+how each run of a sequence of statements would slim as a method of its own (every candidate
+function body, say) asks of about n²/2 runs; slimmed one by one from scratch, a flat generated
+method of a few hundred statements takes hours. The search walks a sequence left to right, and
+its states after statements `from..i-1` do not depend on what follows, so one walk from each
+first statement serves every run starting there: about n walks, minutes becoming seconds. The
+walk reads the whole sequence as a method of its own, which indexes every run inside it as the
+run's own facts do (the same code lines and seams). The results are the same, run for run:
+`RunSlimmerTest` compares every run of every sequence of the committed parity subset (141,111
+runs, 30,590 of them slimmable) against slimming each from scratch. `solveSeq` uses the same walk,
+and the full parity check is unchanged by it.
+
 ## Surface 1 — Scan
 
 ```bash

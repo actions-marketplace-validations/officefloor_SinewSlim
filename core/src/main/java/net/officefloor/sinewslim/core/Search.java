@@ -155,19 +155,49 @@ final class Search {
 	/** The Pareto front of ways to handle a sequence: lines left, worst seam, cost, pieces. */
 	List<Option> solveSeq(Stmt node) {
 		List<Stmt> kids = node.kids();
-		int n = kids.size();
-		List<List<Option>> opts = new ArrayList<>(n);
+		List<List<Option>> opts = stmtOptions(kids);
+		List<Map<Integer, Option>> at = pass(kids, opts, 0, null);
+		return pareto(new ArrayList<>(at.get(kids.size()).values()));
+	}
+
+	/** Each statement's options, as it is or reduced from inside ({@link #solveStmt}). */
+	List<List<Option>> stmtOptions(List<Stmt> kids) {
+		List<List<Option>> opts = new ArrayList<>(kids.size());
 		for (Stmt k : kids) {
 			opts.add(solveStmt(k));
 		}
-		List<Map<Integer, Option>> at = new ArrayList<>(n + 1);
-		for (int i = 0; i <= n; i++) {
+		return opts;
+	}
+
+	/** Told the states after each statement of a pass, once they are complete. */
+	interface EndListener {
+
+		/**
+		 * @param end    the pass has handled the statements before this index
+		 * @param states the ways of handling them, by lines left
+		 */
+		void states(int end, Map<Integer, Option> states);
+	}
+
+	/**
+	 * The left-to-right walk of a sequence from the statement at {@code from}: the states after
+	 * each statement, the run from {@code from} handled as a sequence of its own. The states after
+	 * {@code kids[from..i-1]} are the same whatever follows, so one pass serves every run that
+	 * starts at {@code from}. Returned by offset from {@code from}.
+	 *
+	 * @param opts  each statement's own options ({@link #stmtOptions})
+	 * @param onEnd told each end's states as they are complete; may be null
+	 */
+	List<Map<Integer, Option>> pass(List<Stmt> kids, List<List<Option>> opts, int from, EndListener onEnd) {
+		int n = kids.size();
+		List<Map<Integer, Option>> at = new ArrayList<>(n - from + 1);
+		for (int i = from; i <= n; i++) {
 			at.add(new LinkedHashMap<>());
 		}
 		at.get(0).put(0, Option.of(0));
-		for (int i = 0; i < n; i++) {
-			Map<Integer, Option> next = at.get(i + 1);
-			for (Option st : at.get(i).values()) {
+		for (int i = from; i < n; i++) {
+			Map<Integer, Option> next = at.get(i + 1 - from);
+			for (Option st : at.get(i - from).values()) {
 				for (Option o : opts.get(i)) {
 					push(next, combine(st, o));
 				}
@@ -181,7 +211,7 @@ final class Search {
 						int w = p.width(sm), c = p.cost(sm);
 						for (Option o : opts.get(i)) {
 							if (p.minPiece() <= o.rem && o.rem <= p.target() && o.rem - 1 >= p.minSaving()) {
-								for (Option st : List.copyOf(at.get(i).values())) {
+								for (Option st : List.copyOf(at.get(i - from).values())) {
 									push(next, new Option(st.rem + left(sm), Math.max(Math.max(st.width, o.width), w),
 											st.cost + o.cost + c, st.pieces + o.pieces + 1,
 											append(concat(st.cuts, o.cuts), sm)));
@@ -191,32 +221,34 @@ final class Search {
 					}
 				}
 			}
-			if (p.structuralOnly()) {
-				continue;
+			if (!p.structuralOnly()) {
+				// a run of several statements, as they are
+				for (int j = i - 1; j >= from; j--) {
+					int lines = m.lines(kids.get(j).start(), kid.end());
+					if (lines > p.target()) {
+						break;
+					}
+					if (lines < p.minPiece() || lines - 1 < p.minSaving()) {
+						continue;
+					}
+					if (!p.ignoreJumps() && !Jumps.ok(kids.subList(j, i + 1), p.trailingReturn())) {
+						continue;
+					}
+					Seam sm = m.seam(kids.get(j).start(), kid.end());
+					if (!p.feasible(sm) || excluded.contains(Run.of(sm))) {
+						continue;
+					}
+					int w = p.width(sm), c = p.cost(sm);
+					for (Option st : at.get(j - from).values()) {
+						push(next, new Option(st.rem + left(sm), Math.max(st.width, w), st.cost + c, st.pieces + 1,
+								append(st.cuts, sm)));
+					}
+				}
 			}
-			// a run of several statements, as they are
-			for (int j = i - 1; j >= 0; j--) {
-				int lines = m.lines(kids.get(j).start(), kid.end());
-				if (lines > p.target()) {
-					break;
-				}
-				if (lines < p.minPiece() || lines - 1 < p.minSaving()) {
-					continue;
-				}
-				if (!p.ignoreJumps() && !Jumps.ok(kids.subList(j, i + 1), p.trailingReturn())) {
-					continue;
-				}
-				Seam sm = m.seam(kids.get(j).start(), kid.end());
-				if (!p.feasible(sm) || excluded.contains(Run.of(sm))) {
-					continue;
-				}
-				int w = p.width(sm), c = p.cost(sm);
-				for (Option st : at.get(j).values()) {
-					push(next, new Option(st.rem + left(sm), Math.max(st.width, w), st.cost + c, st.pieces + 1,
-							append(st.cuts, sm)));
-				}
+			if (onEnd != null) {
+				onEnd.states(i + 1, next);
 			}
 		}
-		return pareto(new ArrayList<>(at.get(n).values()));
+		return at;
 	}
 }

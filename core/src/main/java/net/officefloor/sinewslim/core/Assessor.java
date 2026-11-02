@@ -1,5 +1,6 @@
 package net.officefloor.sinewslim.core;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -37,13 +38,7 @@ public record Assessor(Params params, boolean records, boolean structural, int p
 		}
 		SlimResult struct = structural && !params.structuralOnly() ? Slimmer.slim(facts, params.structural(), excluded) : null;
 		if (best.feasible()) {
-			SlimResult proposal = best;
-			if (struct != null && struct.feasible() && preferStructuralWithin >= 0
-					&& struct.cost() <= best.cost() + preferStructuralWithin) {
-				proposal = struct;
-			}
-			Status status = locked(proposal) ? Status.SLIMMABLE_BUT_LOCKED : Status.SLIMMABLE;
-			return new Assessment(status, null, null, proposal, best, struct);
+			return slimmable(best, struct);
 		}
 		Obstacle obstacle = obstacle(facts, excluded);
 		if (records && obstacle == Obstacle.OUTPUTS) {
@@ -58,6 +53,57 @@ public record Assessor(Params params, boolean records, boolean structural, int p
 			}
 		}
 		return new Assessment(Status.NOT_SLIMMABLE, obstacle, detail, best, best, struct);
+	}
+
+	/** A feasible search's assessment: its proposal, the structural one when it costs little more. */
+	private Assessment slimmable(SlimResult best, SlimResult struct) {
+		SlimResult proposal = best;
+		if (struct != null && struct.feasible() && preferStructuralWithin >= 0
+				&& struct.cost() <= best.cost() + preferStructuralWithin) {
+			proposal = struct;
+		}
+		Status status = locked(proposal) ? Status.SLIMMABLE_BUT_LOCKED : Status.SLIMMABLE;
+		return new Assessment(status, null, null, proposal, best, struct);
+	}
+
+	/**
+	 * Runs of one sequence of sibling statements, each assessed as a method of its own, for a
+	 * caller that asks of many runs of the same sequence ({@link RunSlimmer}).
+	 *
+	 * @param facts    the method's facts
+	 * @param siblings the sequence: a statement's kids, in order
+	 */
+	public Runs runs(MethodFacts facts, List<Stmt> siblings) {
+		return new Runs(facts, siblings);
+	}
+
+	/** Runs of one sequence, assessed as {@link #assess(MethodFacts)} assesses a method. */
+	public final class Runs {
+
+		private final RunSlimmer best, struct;
+
+		private Runs(MethodFacts facts, List<Stmt> siblings) {
+			this.best = new RunSlimmer(facts, siblings, params, Set.of());
+			this.struct = structural && !params.structuralOnly() ? new RunSlimmer(facts, siblings, params.structural(), Set.of())
+					: null;
+		}
+
+		/** {@code siblings[from..to-1]} slimmed as the method {@code runFacts}, under the assessor's parameters. */
+		public SlimResult slim(int from, int to, MethodFacts runFacts) {
+			return best.slim(from, to, runFacts);
+		}
+
+		/** {@code siblings[from..to-1]} assessed as the method {@code runFacts}: the same as {@code assess(runFacts)}. */
+		public Assessment assess(int from, int to, MethodFacts runFacts) {
+			SlimResult b = best.slim(from, to, runFacts);
+			if (!b.applicable()) {
+				return new Assessment(Status.UNDER_CAP, null, null, b, b, null);
+			}
+			if (!b.feasible()) {
+				return Assessor.this.assess(runFacts); // why not, and what would: the variants, searched afresh
+			}
+			return slimmable(b, struct == null ? null : struct.slim(from, to, runFacts));
+		}
 	}
 
 	/** Every piece and the remainder bound to the class: splitting moves nothing out of it. */

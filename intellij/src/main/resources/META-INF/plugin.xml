@@ -21,7 +21,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <ul><li><b>0.2.0</b>: every method is read one way, as extracted methods: the
+        <ul><li><b>0.2.1</b>: no change to the plugin or to any result. The libraries add
+        <code>Assessor.runs</code>, which assesses many runs of one sequence of statements, each as
+        a method of its own, with one walk of the search per first statement instead of one search
+        per run; the results are the same, run for run.</li>
+        <li><b>0.2.0</b>: every method is read one way, as extracted methods: the
         <code>framework:</code> setting is removed, and a configuration that still has it is read
         without it, with a notification saying so. Slimming results are otherwise unchanged
         (checked method for method against the reference implementation). SinewSlim's libraries
