@@ -44,7 +44,10 @@ public final class Slimmer {
 		// what the search removes is read against the statements it sees; the lines no statement
 		// covers (the signature, a closing brace) stay whatever is cut
 		int kidsTotal = search.covered(facts.body());
-		return result(m, p, total, kidsTotal, best(search.solveSeq(facts.body()), p, total, kidsTotal));
+		// best takes only an option leaving at most target + kidsTotal - total lines: the search
+		// keeps no other (Search.pass)
+		return result(m, p, total, kidsTotal,
+				best(search.solveSeq(facts.body(), p.target() + kidsTotal - total), p, total, kidsTotal));
 	}
 
 	/** The method's length: its counted length, else its code lines. */

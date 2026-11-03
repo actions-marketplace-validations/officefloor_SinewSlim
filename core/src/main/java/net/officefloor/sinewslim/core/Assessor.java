@@ -93,6 +93,15 @@ public record Assessor(Params params, boolean records, boolean structural, int p
 			return best.slim(from, to, runFacts);
 		}
 
+		/**
+		 * Whether {@code siblings[from..to-1]}, of {@code length} code lines, cannot be slimmed
+		 * ({@link RunSlimmer#cannot}): when true, {@code slim(from, to, runFacts)} is infeasible, and
+		 * the run's facts need not be built to ask.
+		 */
+		public boolean cannot(int from, int to, int length) {
+			return best.cannot(from, to, length);
+		}
+
 		/** {@code siblings[from..to-1]} assessed as the method {@code runFacts}: the same as {@code assess(runFacts)}. */
 		public Assessment assess(int from, int to, MethodFacts runFacts) {
 			SlimResult b = best.slim(from, to, runFacts);
