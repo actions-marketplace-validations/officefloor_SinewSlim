@@ -46,7 +46,7 @@ class RunSlimmerTest {
 	void everyRunOfTheParitySubsetIsSlimmedAsFromScratch() throws IOException {
 		InputStream in = RunSlimmerTest.class.getResourceAsStream(StudyParityTest.SUBSET);
 		assertTrue(in != null);
-		int methods = 0, runs = 0, slimmed = 0;
+		int methods = 0, runs = 0, slimmed = 0, cannot = 0;
 		List<String> mismatches = new ArrayList<>();
 		try (BufferedReader r = new BufferedReader(new InputStreamReader(new GZIPInputStream(in), StandardCharsets.UTF_8))) {
 			r.readLine(); // the parameters
@@ -66,6 +66,12 @@ class RunSlimmerTest {
 							runs++;
 							SlimResult want = Slimmer.slim(rf, Assessor.DEFAULTS.params(), Set.of());
 							SlimResult got = fast.slim(from, to, rf);
+							if (fast.cannot(from, to, rf.length())) {
+								cannot++;
+								if (want.feasible() && mismatches.size() < 10) {
+									mismatches.add("cannot " + facts.declLine() + " [" + from + "," + to + "): " + want);
+								}
+							}
 							if (!want.equals(got) && mismatches.size() < 10) {
 								mismatches.add("slim " + facts.declLine() + " [" + from + "," + to + "): " + got + " != " + want);
 							}
@@ -83,6 +89,8 @@ class RunSlimmerTest {
 		}
 		assertEquals(List.of(), mismatches, methods + " methods, " + runs + " runs, " + slimmed + " slimmed");
 		assertTrue(slimmed > 1000, "too few runs slimmed to show anything: " + slimmed + " of " + runs);
-		System.out.println("RunSlimmerTest: " + methods + " methods, " + runs + " runs, " + slimmed + " slimmed: all as from scratch");
+		assertTrue(cannot > 1000, "too few runs known infeasible from the walk to show anything: " + cannot);
+		System.out.println("RunSlimmerTest: " + methods + " methods, " + runs + " runs, " + slimmed + " slimmed, " + cannot
+				+ " known infeasible from the walk: all as from scratch");
 	}
 }

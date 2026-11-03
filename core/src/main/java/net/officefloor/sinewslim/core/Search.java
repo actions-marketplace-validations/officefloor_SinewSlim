@@ -154,9 +154,17 @@ final class Search {
 
 	/** The Pareto front of ways to handle a sequence: lines left, worst seam, cost, pieces. */
 	List<Option> solveSeq(Stmt node) {
+		return solveSeq(node, Integer.MAX_VALUE);
+	}
+
+	/**
+	 * The same front less the options that leave more than {@code maxRem} lines: for a caller that
+	 * takes only an option leaving at most that many ({@link Slimmer#slim}, a method's own body).
+	 */
+	List<Option> solveSeq(Stmt node, int maxRem) {
 		List<Stmt> kids = node.kids();
 		List<List<Option>> opts = stmtOptions(kids);
-		List<Map<Integer, Option>> at = pass(kids, opts, 0, null);
+		List<Map<Integer, Option>> at = pass(kids, opts, 0, maxRem, null);
 		return pareto(new ArrayList<>(at.get(kids.size()).values()));
 	}
 
@@ -189,17 +197,31 @@ final class Search {
 	 * @param onEnd told each end's states as they are complete; may be null
 	 */
 	List<Map<Integer, Option>> pass(List<Stmt> kids, List<List<Option>> opts, int from, EndListener onEnd) {
+		return pass(kids, opts, from, Integer.MAX_VALUE, onEnd);
+	}
+
+	/**
+	 * The same walk, keeping only the states that leave {@code maxRem} lines or fewer. The lines a
+	 * state leaves only grow as the walk goes on (each statement adds its own, each cut its call),
+	 * so a state over it, and every state built from it, leaves too many at every later end: for a
+	 * caller that asks only which states reach the target there ({@link RunSlimmer}), dropping them
+	 * changes nothing. Nor can a dropped state have hidden a kept one from {@link #pareto}, as it
+	 * leaves more lines. Once no state is left that a later statement could build on, the walk
+	 * ends: the ends after it have no states, and are not told.
+	 */
+	List<Map<Integer, Option>> pass(List<Stmt> kids, List<List<Option>> opts, int from, int maxRem, EndListener onEnd) {
 		int n = kids.size();
 		List<Map<Integer, Option>> at = new ArrayList<>(n - from + 1);
 		for (int i = from; i <= n; i++) {
 			at.add(new LinkedHashMap<>());
 		}
 		at.get(0).put(0, Option.of(0));
+		int live = from; // the last statement a state comes before: where a later run could start
 		for (int i = from; i < n; i++) {
 			Map<Integer, Option> next = at.get(i + 1 - from);
 			for (Option st : at.get(i - from).values()) {
 				for (Option o : opts.get(i)) {
-					push(next, combine(st, o));
+					push(next, combine(st, o), maxRem);
 				}
 			}
 			Stmt kid = kids.get(i);
@@ -214,7 +236,7 @@ final class Search {
 								for (Option st : List.copyOf(at.get(i - from).values())) {
 									push(next, new Option(st.rem + left(sm), Math.max(Math.max(st.width, o.width), w),
 											st.cost + o.cost + c, st.pieces + o.pieces + 1,
-											append(concat(st.cuts, o.cuts), sm)));
+											append(concat(st.cuts, o.cuts), sm)), maxRem);
 								}
 							}
 						}
@@ -228,8 +250,8 @@ final class Search {
 					if (lines > p.target()) {
 						break;
 					}
-					if (lines < p.minPiece() || lines - 1 < p.minSaving()) {
-						continue;
+					if (lines < p.minPiece() || lines - 1 < p.minSaving() || at.get(j - from).isEmpty()) {
+						continue; // too short, or no state to cut it from
 					}
 					if (!p.ignoreJumps() && !Jumps.ok(kids.subList(j, i + 1), p.trailingReturn())) {
 						continue;
@@ -241,14 +263,27 @@ final class Search {
 					int w = p.width(sm), c = p.cost(sm);
 					for (Option st : at.get(j - from).values()) {
 						push(next, new Option(st.rem + left(sm), Math.max(st.width, w), st.cost + c, st.pieces + 1,
-								append(st.cuts, sm)));
+								append(st.cuts, sm)), maxRem);
 					}
 				}
 			}
 			if (onEnd != null) {
 				onEnd.states(i + 1, next);
 			}
+			if (!next.isEmpty()) {
+				live = i + 1;
+			} else if (live < n && m.lines(kids.get(live).start(), kid.end()) > p.target()) {
+				// every later state is built from one before a statement no later than live, by a
+				// run from there; any such run is now over the target
+				break;
+			}
 		}
 		return at;
+	}
+
+	private static void push(Map<Integer, Option> states, Option o, int maxRem) {
+		if (o.rem <= maxRem) {
+			push(states, o);
+		}
 	}
 }

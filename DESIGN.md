@@ -321,6 +321,21 @@ run's own facts do (the same code lines and seams). The results are the same, ru
 runs, 30,590 of them slimmable) against slimming each from scratch. `solveSeq` uses the same walk,
 and the full parity check is unchanged by it.
 
+**Walks that end (since 0.2.2).** A walk to the sequence's end still costs time in its length,
+and with n walks a generated table of thousands of statements took hours again. A state's lines
+left only grow along a walk, and an end's runs are slimmed only by an option that leaves at most
+the target plus its covered lines less its length. So a walk keeps only the states under the
+largest such limit of its ends: a state over it, and every state built from it, can bring no
+later run to the target, and it can hide no kept state from the Pareto front, as it leaves
+more. Once no state is left that a run within the target could start from, the walk stops: the
+runs after it cannot be slimmed. A flat run can hold at most about target² lines anyway (each
+piece leaves its call in what is left, which must itself fit), so a walk now covers at most a
+few hundred statements. `RunSlimmer.cannot` answers "cannot be slimmed" from the walk alone,
+without building the run's facts or index (a run's facts index each of its statements as the
+walk does: code lines come from the statement tree, and no sibling has a line inside a
+statement's span but on its first or last line). `RunSlimmerTest` checks that every run it
+answers for (8,347 of the subset) is infeasible from scratch, and the other runs as before.
+
 ## Surface 1 — Scan
 
 ```bash
