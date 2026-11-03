@@ -158,8 +158,9 @@ final class Search {
 	}
 
 	/**
-	 * The same front less the options that leave more than {@code maxRem} lines: for a caller that
-	 * takes only an option leaving at most that many ({@link Slimmer#slim}, a method's own body).
+	 * The same front less the options that leave more than {@code maxRem} lines, and less the
+	 * states that could reach none that leave fewer ({@link #pass}): for a caller that takes only an
+	 * option leaving at most that many ({@link Slimmer#slim}, a method's own body).
 	 */
 	List<Option> solveSeq(Stmt node, int maxRem) {
 		List<Stmt> kids = node.kids();
@@ -201,13 +202,18 @@ final class Search {
 	}
 
 	/**
-	 * The same walk, keeping only the states that leave {@code maxRem} lines or fewer. The lines a
-	 * state leaves only grow as the walk goes on (each statement adds its own, each cut its call),
-	 * so a state over it, and every state built from it, leaves too many at every later end: for a
-	 * caller that asks only which states reach the target there ({@link RunSlimmer}), dropping them
-	 * changes nothing. Nor can a dropped state have hidden a kept one from {@link #pareto}, as it
-	 * leaves more lines. Once no state is left that a later statement could build on, the walk
-	 * ends: the ends after it have no states, and are not told.
+	 * The same walk, keeping only the states that can still end at {@code maxRem} lines left or
+	 * fewer. A later statement adds its option's lines left, which is negative when it is slimmed
+	 * from inside by more than its own length counts (a loop or if whose body's statements are
+	 * cut); a cut adds its call, at least one. So the lines left can fall after statement
+	 * {@code q} by at most the sum of the later statements' most negative options, and a state
+	 * that leaves more than {@code maxRem} plus that fall, and every state built from it, leaves
+	 * too many at every later end: for a caller that asks only which states reach that limit there
+	 * ({@link Slimmer#slim}, {@link RunSlimmer}), dropping them changes nothing. Nor can a dropped
+	 * state hide a kept one from {@link #pareto} at an end, as it leaves more lines than any that
+	 * reaches the limit. Once no state is left that a later statement could build on, the walk
+	 * ends: the ends after it have no states, and are not told. A sequence with no negative option
+	 * (a flat table) is pruned at {@code maxRem} itself.
 	 */
 	List<Map<Integer, Option>> pass(List<Stmt> kids, List<List<Option>> opts, int from, int maxRem, EndListener onEnd) {
 		int n = kids.size();
@@ -216,12 +222,22 @@ final class Search {
 			at.add(new LinkedHashMap<>());
 		}
 		at.get(0).put(0, Option.of(0));
+		// the most the lines left can still fall after the statements before each index
+		long[] fall = new long[n + 1];
+		for (int k = n - 1; k >= from; k--) {
+			int least = 0;
+			for (Option o : opts.get(k)) {
+				least = Math.min(least, o.rem);
+			}
+			fall[k] = fall[k + 1] - least;
+		}
 		int live = from; // the last statement a state comes before: where a later run could start
 		for (int i = from; i < n; i++) {
 			Map<Integer, Option> next = at.get(i + 1 - from);
+			int limit = (int) Math.min(Integer.MAX_VALUE, (long) maxRem + fall[i + 1]);
 			for (Option st : at.get(i - from).values()) {
 				for (Option o : opts.get(i)) {
-					push(next, combine(st, o), maxRem);
+					push(next, combine(st, o), limit);
 				}
 			}
 			Stmt kid = kids.get(i);
@@ -236,7 +252,7 @@ final class Search {
 								for (Option st : List.copyOf(at.get(i - from).values())) {
 									push(next, new Option(st.rem + left(sm), Math.max(Math.max(st.width, o.width), w),
 											st.cost + o.cost + c, st.pieces + o.pieces + 1,
-											append(concat(st.cuts, o.cuts), sm)), maxRem);
+											append(concat(st.cuts, o.cuts), sm)), limit);
 								}
 							}
 						}
@@ -263,7 +279,7 @@ final class Search {
 					int w = p.width(sm), c = p.cost(sm);
 					for (Option st : at.get(j - from).values()) {
 						push(next, new Option(st.rem + left(sm), Math.max(st.width, w), st.cost + c, st.pieces + 1,
-								append(st.cuts, sm)), maxRem);
+								append(st.cuts, sm)), limit);
 					}
 				}
 			}

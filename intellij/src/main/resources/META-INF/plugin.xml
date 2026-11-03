@@ -21,11 +21,14 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <ul><li><b>0.2.2</b>: no change to the plugin or to any result. The search drops, as it
-        goes, the ways of handling a method that already leave too many lines to reach the target,
-        which they never can again; very long methods are assessed much faster. Runs of a sequence
-        that cannot be slimmed are told apart without building their facts
-        (<code>Assessor.Runs.cannot</code>).</li>
+        <ul><li><b>0.2.3</b>: fixes 0.2.2, which could slim a method differently from 0.2.1 when
+        several statements share a line inside a loop or if: the search drops only the states
+        that can no longer reach the target, allowing for such statements. No change to the plugin; results are 0.2.1's.</li>
+        <li><b>0.2.2</b>: no change to the plugin. The search drops, as it goes, the ways of
+        handling a method that already leave too many lines to reach the target; very long methods
+        are assessed much faster. Runs of a sequence that cannot be slimmed are told apart without
+        building their facts (<code>Assessor.Runs.cannot</code>). It could slim a method
+        differently when several statements share a line inside a loop or if: fixed in 0.2.3.</li>
         <li><b>0.2.1</b>: no change to the plugin or to any result. The libraries add
         <code>Assessor.runs</code>, which assesses many runs of one sequence of statements, each as
         a method of its own, with one walk of the search per first statement instead of one search
