@@ -25,7 +25,10 @@
         loop. A local declared before the loop with a literal (<code>int count = 0</code>) and
         written in it was neither passed in nor kept when the piece was its only use in the loop,
         so the extraction offered could restart it on every iteration or not compile. Some slim
-        costs rise, and a few methods are no longer slimmable.</li>
+        costs and widths change. A proposal that rested on such a piece is replaced: usually by a
+        dearer one, sometimes by a cheaper one that was set aside for a narrower but wrongly priced
+        split or for a structural one within a line of it. A few methods are no longer slimmable,
+        and a few are no longer locked.</li>
         <li><b>0.2.3</b>: fixes 0.2.2, which could slim a method differently from 0.2.1 when
         several statements share a line inside a loop or if: the search drops only the states
         that can no longer reach the target, allowing for such statements. No change to the plugin; results are 0.2.1's.</li>

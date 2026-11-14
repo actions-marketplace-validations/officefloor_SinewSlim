@@ -240,6 +240,13 @@ extracted method would not compile). A run of the whole loop still moves the dec
 literal the loop only reads still moves. `LoopSeamTest` holds both; the parity data was
 regenerated from the fixed `split.py`.
 
+Some slim costs and widths change with it. A proposal that rested on such a piece is replaced:
+usually by a dearer one, sometimes by a cheaper one. The search takes the smallest worst seam
+before the smallest cost, so a cheaper segmentation of wider seam, set aside for a narrower one
+that was wrongly priced, can now win; and a structural proposal preferred within
+`prefer_structural_within` of the best can, priced correctly, fall outside it, leaving the best.
+A few methods are no longer slimmable, and a few are no longer locked.
+
 A run is **feasible** when it has at most `max_outputs` outputs, at most `max_inputs`
 inputs, no jump that leaves it (a trailing `return` aside), at least `min_piece` lines, and
 at most `target` lines once its own inner pieces are out.
