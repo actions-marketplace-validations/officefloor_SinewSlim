@@ -123,6 +123,16 @@ public final class MethodIndex {
 				continue;
 			}
 			boolean before = anyBelow(refs, lo) || anyBelow(muts, lo) || anyBelowBut(defs, lo, iv.decl());
+			if (!before) {
+				// declared before an enclosing loop and written in it: the run reads the value the previous
+				// iteration left, so a literal declaration cannot move into the piece across the back edge
+				for (int[] loop : enclosing) {
+					if (v.first() < loop[0] && any(defs, loop[0], loop[1])) {
+						before = true;
+						break;
+					}
+				}
+			}
 			boolean after = anyAbove(iv.touches(), hi);
 			boolean written = any(defs, lo, hi);
 			if (v.kind() == Var.Kind.PARAM && !anyBelow(defs, lo) && !anyBelow(muts, lo)) {

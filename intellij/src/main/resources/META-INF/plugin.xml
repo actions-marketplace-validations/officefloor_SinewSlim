@@ -21,7 +21,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <ul><li><b>0.2.3</b>: fixes 0.2.2, which could slim a method differently from 0.2.1 when
+        <ul><li><b>0.2.4</b>: a value carried round a loop is now an input of a piece inside the
+        loop. A local declared before the loop with a literal (<code>int count = 0</code>) and
+        written in it was neither passed in nor kept when the piece was its only use in the loop,
+        so the extraction offered could restart it on every iteration or not compile. Some slim
+        costs rise, and a few methods are no longer slimmable.</li>
+        <li><b>0.2.3</b>: fixes 0.2.2, which could slim a method differently from 0.2.1 when
         several statements share a line inside a loop or if: the search drops only the states
         that can no longer reach the target, allowing for such statements. No change to the plugin; results are 0.2.1's.</li>
         <li><b>0.2.2</b>: no change to the plugin. The search drops, as it goes, the ways of

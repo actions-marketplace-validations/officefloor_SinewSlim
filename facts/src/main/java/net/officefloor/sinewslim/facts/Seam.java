@@ -8,7 +8,8 @@ import java.util.List;
  *
  * @param lo            the run's first line
  * @param hi            the run's last line
- * @param inputs        used inside and defined before: the new method's parameters
+ * @param inputs        used inside and defined before, or carried round an enclosing loop that writes
+ *                      them: the new method's parameters
  * @param outputs       written inside and read after, or read earlier in an enclosing loop: its
  *                      return value
  * @param moved         declared before with no value or a literal one, used only inside: the
