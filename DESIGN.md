@@ -223,11 +223,29 @@ For a run of statements with line set L, each local or parameter takes one role:
 
 | Role | Rule | Becomes |
 |---|---|---|
-| input | referenced in L and referenced before L | a parameter |
+| input | referenced in L and referenced before L, or declared before an enclosing loop that writes it | a parameter |
 | output | written in L and referenced after L, or referenced earlier in an enclosing loop | the return value |
-| moved | declared before L with no value or a literal one, every other reference in L | nothing: the declaration moves into the new method |
+| moved | declared before L with no value or a literal one, every other reference in L, and no enclosing loop writes it | nothing: the declaration moves into the new method |
 | passed | a method parameter used unchanged | an input, labelled |
 | internal / untouched | — | nothing |
+
+**Values carried round a loop (since 0.2.4).** A run inside a loop reads the value the previous
+iteration left. A local declared before the loop with a literal one (`int count = 0`) and written
+in it is therefore an input of a run inside the loop that touches it: its declaration cannot move
+into the piece across the back edge. Up to 0.2.3 (and the study's `split.py` before the same fix)
+such a local was neither an input nor moved when the run was its only touch in the loop, so a run
+`count++` was priced with no input (the extracted method would restart at the literal on every
+iteration), and a run `use(last)`, with `last = v` later in the loop, with no role at all (the
+extracted method would not compile). A run of the whole loop still moves the declaration, and a
+literal the loop only reads still moves. `LoopSeamTest` holds both; the parity data was
+regenerated from the fixed `split.py`.
+
+Some slim costs and widths change with it. A proposal that rested on such a piece is replaced:
+usually by a dearer one, sometimes by a cheaper one. The search takes the smallest worst seam
+before the smallest cost, so a cheaper segmentation of wider seam, set aside for a narrower one
+that was wrongly priced, can now win; and a structural proposal preferred within
+`prefer_structural_within` of the best can, priced correctly, fall outside it, leaving the best.
+A few methods are no longer slimmable, and a few are no longer locked.
 
 A run is **feasible** when it has at most `max_outputs` outputs, at most `max_inputs`
 inputs, no jump that leaves it (a trailing `return` aside), at least `min_piece` lines, and
